@@ -1,5 +1,7 @@
 package com.example.crudfirebaseviewmodel.screens
 
+import android.annotation.SuppressLint
+import android.util.Log
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.*
@@ -7,43 +9,47 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.runtime.*
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.toSize
 import androidx.navigation.NavController
-import androidx.navigation.compose.rememberNavController
+import com.example.crudfirebaseviewmodel.ViewModel.EditarViewModel
 import com.example.crudfirebaseviewmodel.composables.BackgroundImage
 import com.example.crudfirebaseviewmodel.composables.ButtonDefault
 import com.example.crudfirebaseviewmodel.composables.TextInput
 import com.example.crudfirebaseviewmodel.composables.Title
-import com.google.firebase.firestore.FirebaseFirestore
+import com.example.crudfirebaseviewmodel.modelo.ExpandableCardItem
 
+@SuppressLint("UnusedMaterialScaffoldPaddingParameter")
 @Composable
-fun Editar(navController: NavController) {
-
+fun Editar(navController: NavController, EditarViewModel: EditarViewModel) {
     Scaffold(topBar = { Title(title = "Editar", navController = navController) }) {
-        EditarBody()
+
+            EditarBody(EditarViewModel)
+
     }
 }
 
 @Composable
-fun EditarBody() {
-    val db = FirebaseFirestore.getInstance()
-    var name by remember { mutableStateOf("") }
+fun EditarBody(EditarViewModel: EditarViewModel) {
+
+
+    val farmaco = EditarViewModel.farmaco.observeAsState(ExpandableCardItem("",
+        "",
+        "",
+        ExpandableCardItem.ItemDetail(false, "")))
+    val name: String by EditarViewModel.name.observeAsState(initial = "")
+    val toxico: Boolean by EditarViewModel.toxico.observeAsState(initial = false)
+    val estado: String by EditarViewModel.estado.observeAsState(initial = "")
+    val categoria: String by EditarViewModel.categoria.observeAsState(initial = "")
+
     var categoriesExpanded by remember { mutableStateOf(false) }
-    var checked by remember {
-        mutableStateOf(false)
-    }
-    var estado by remember {
-        mutableStateOf("")
-    }
 
 
-    var categoria by remember { mutableStateOf("") }
     val categorias = listOf("Analgésico",
         "Anestésico",
         "Antibiótico ",
@@ -71,28 +77,41 @@ fun EditarBody() {
         "Hormonoterápico",
         "Quimioterápico",
         "Relajante muscular ")
-    var TextSize by remember { mutableStateOf(Size.Zero) }
+
+    var textSize by remember { mutableStateOf(Size.Zero) }
     val icon = if (categoriesExpanded)
         Icons.Filled.KeyboardArrowUp
     else
         Icons.Filled.KeyboardArrowDown
 
+
+
+
+   // EditarViewModel.getFarmacoId(id)
+    Log.i("xxxxxxxxx", farmaco.value.toString())
+
+
+
     BackgroundImage()
     Column(horizontalAlignment = Alignment.CenterHorizontally,
-        // verticalArrangement = Arrangement.SpaceBetween,
+
         modifier = Modifier
             .fillMaxSize()
             .padding(20.dp)) {
 
-        TextInput(text = name, onValueChange = { name = it }, label = "Nombre")
+        TextInput(text = name,
+            onValueChange = { EditarViewModel.setName(name = it) },
+            label = "Nombre")
 
+        Spacer(modifier = Modifier.size(8.dp))
 
         OutlinedTextField(
             value = categoria,
-            onValueChange = { categoria = it },
+            onValueChange = { EditarViewModel.setCategoria(it) },
             modifier = Modifier
                 .fillMaxWidth()
-                .onGloballyPositioned { coordinates -> TextSize = coordinates.size.toSize() },
+                .onGloballyPositioned { coordinates -> textSize = coordinates.size.toSize() },
+
             label = { Text("Categoria") },
             trailingIcon = {
                 Icon(icon, "contentDescription",
@@ -103,10 +122,11 @@ fun EditarBody() {
         DropdownMenu(
             expanded = categoriesExpanded,
             onDismissRequest = { categoriesExpanded = false },
-        ) {
+
+            ) {
             categorias.forEach { label ->
                 DropdownMenuItem(onClick = {
-                    categoria = label
+                    EditarViewModel.setCategoria(label)
                     categoriesExpanded = false
                 }) {
                     Text(text = label)
@@ -119,30 +139,16 @@ fun EditarBody() {
                 .fillMaxWidth()
                 .padding(start = 8.dp)) {
             Text(text = "Tóxico")
-            Checkbox(checked = checked, onCheckedChange = { checked = !checked })
+            Checkbox(checked = toxico, onCheckedChange = { EditarViewModel.setToxico(!toxico) })
         }
-        TextInput(text = estado, onValueChange = { estado = it }, label = "Estado")
+        TextInput(text = estado,
+            onValueChange = { EditarViewModel.setEstado(it) },
+            label = "Estado")
+
         Spacer(modifier = Modifier.size(16.dp))
         ButtonDefault(text = "Editar") {
+            EditarViewModel.editarFarmaco()
 
-
-            db.collection("farmacos").document(name).update(mapOf(
-                "nombre" to name,
-                "categoria" to categoria,
-                "toxico" to checked,
-                "estado" to estado
-            ))
-            name=""
-            categoria=""
-            checked=false
-            estado=""
         }
     }
-}
-
-@Preview
-@Composable
-fun EditarPreview() {
-    val navController = rememberNavController()
-    Anadir(navController)
 }

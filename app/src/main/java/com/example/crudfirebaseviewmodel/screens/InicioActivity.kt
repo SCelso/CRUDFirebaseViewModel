@@ -1,5 +1,6 @@
 package com.example.crudfirebaseviewmodel.screens
 
+import android.annotation.SuppressLint
 import android.util.Log
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -11,20 +12,22 @@ import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Scaffold
 import androidx.compose.material.Text
 import androidx.compose.runtime.*
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.example.crudfirebaseviewmodel.ViewModel.InicioViewModel
 import com.example.crudfirebaseviewmodel.composables.BackgroundImage
 import com.example.crudfirebaseviewmodel.composables.ExpandableCardRow
 import com.example.crudfirebaseviewmodel.composables.Title
-import com.example.crudfirebaseviewmodel.modelo.ExpandableCardItem
-import com.example.crudfirebaseviewmodel.navigation.AppScreens
+
 import com.google.firebase.firestore.FirebaseFirestore
 
+@SuppressLint("UnusedMaterialScaffoldPaddingParameter")
 @Composable
-fun Inicio(navController: NavController) {
+fun Inicio(navController: NavController, InicioViewModel: InicioViewModel) {
     Scaffold(topBar = { Title(title = "Farmacia", navController = navController, false) },
         floatingActionButton = {
             FloatingActionButton(
@@ -40,36 +43,19 @@ fun Inicio(navController: NavController) {
                 })
         }) {
 
-        InicioBody(navController)
+        InicioBody(navController, InicioViewModel)
     }
 }
 
 @Composable
-fun InicioBody(navController: NavController) {
+fun InicioBody(navController: NavController, InicioViewModel: InicioViewModel) {
     val db = FirebaseFirestore.getInstance()
-    var farmacos by remember { mutableStateOf(emptyArray<ExpandableCardItem>()) }
+    val farmacos = InicioViewModel.farmacos.observeAsState(mutableListOf())
 
-    db.collection("farmacos")
-        .get().addOnSuccessListener { resultado ->
-            farmacos = emptyArray()
-            for (encontrado in resultado) {
 
-                val expandableCardItem = ExpandableCardItem(
-                    encontrado.id,
-                    encontrado["nombre"] as String,
-                    encontrado["categoria"] as String,
-                    ExpandableCardItem.ItemDetail(encontrado["toxico"] as Boolean,
-                        encontrado["estado"] as String))
+    InicioViewModel.getFarmacos()
+    Log.d("farmacos", farmacos.value.toString())
 
-                farmacos += (expandableCardItem)
-
-                Log.i("DATA:", farmacos.toString())
-
-            }
-
-        }.addOnFailureListener {
-
-        }
     BackgroundImage()
 
 
@@ -78,14 +64,13 @@ fun InicioBody(navController: NavController) {
             .fillMaxWidth()
             .verticalScroll(rememberScrollState())) {
 
-        farmacos.forEach {
+
+        farmacos.value.forEach {
             Log.i("Objeto:", it.toString())
             ExpandableCardRow(expandableCardItem = it,
-                { navController.navigate(AppScreens.Editar.ruta) }) {
-                db.collection("farmacos").document(it.id)
-                    .delete()
-                    .addOnSuccessListener { Log.d("TAG", "DocumentSnapshot successfully deleted!") }
-                    .addOnFailureListener { e -> Log.w("TAG", "Error deleting document", e) }
+                { navController.navigate("Editar/${it.id}") }) {
+
+                InicioViewModel.borrarFarmaco(it)
             }
         }
 

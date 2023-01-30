@@ -1,5 +1,6 @@
 package com.example.crudfirebaseviewmodel.screens
 
+import android.annotation.SuppressLint
 import android.util.Log
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -8,15 +9,16 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.runtime.*
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.toSize
 import androidx.navigation.NavController
-import androidx.navigation.compose.rememberNavController
+import com.example.crudfirebaseviewmodel.ViewModel.AnadirViewModel
+import com.example.crudfirebaseviewmodel.ViewModel.FarmacoDB
 import com.example.crudfirebaseviewmodel.composables.BackgroundImage
 import com.example.crudfirebaseviewmodel.composables.ButtonDefault
 import com.example.crudfirebaseviewmodel.composables.TextInput
@@ -24,27 +26,25 @@ import com.example.crudfirebaseviewmodel.composables.Title
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
 
+@SuppressLint("UnusedMaterialScaffoldPaddingParameter")
 @Composable
-fun Anadir(navController: NavController) {
+fun Anadir(navController: NavController, AnadirViewModel: AnadirViewModel) {
     Scaffold(topBar = { Title(title = "Añadir", navController = navController) }) {
-        AnadirBody()
+        AnadirBody(AnadirViewModel)
     }
 }
 
 @Composable
-fun AnadirBody() {
+fun AnadirBody(AnadirViewModel: AnadirViewModel) {
     val db = FirebaseFirestore.getInstance()
-    var name by remember { mutableStateOf("") }
+    val name: String by AnadirViewModel.name.observeAsState(initial = "")
+    val toxico: Boolean by AnadirViewModel.toxico.observeAsState(initial = false)
+    val estado: String by AnadirViewModel.estado.observeAsState(initial = "")
+    val categoria: String by AnadirViewModel.categoria.observeAsState(initial = "")
+
     var categoriesExpanded by remember { mutableStateOf(false) }
-    var checked by remember {
-        mutableStateOf(false)
-    }
-    var estado by remember {
-        mutableStateOf("")
-    }
 
 
-    var categoria by remember { mutableStateOf("") }
     val categorias = listOf("Analgésico",
         "Anestésico",
         "Antibiótico ",
@@ -72,6 +72,7 @@ fun AnadirBody() {
         "Hormonoterápico",
         "Quimioterápico",
         "Relajante muscular ")
+
     var textSize by remember { mutableStateOf(Size.Zero) }
     val icon = if (categoriesExpanded)
         Icons.Filled.KeyboardArrowUp
@@ -85,13 +86,15 @@ fun AnadirBody() {
             .fillMaxSize()
             .padding(20.dp)) {
 
-        TextInput(text = name, onValueChange = { name = it }, label = "Nombre")
+        TextInput(text = name,
+            onValueChange = { AnadirViewModel.setName(name = it) },
+            label = "Nombre")
 
         Spacer(modifier = Modifier.size(8.dp))
 
         OutlinedTextField(
             value = categoria,
-            onValueChange = { categoria = it },
+            onValueChange = { AnadirViewModel.setCategoria(it) },
             modifier = Modifier
                 .fillMaxWidth()
                 .onGloballyPositioned { coordinates -> textSize = coordinates.size.toSize() },
@@ -106,11 +109,11 @@ fun AnadirBody() {
         DropdownMenu(
             expanded = categoriesExpanded,
             onDismissRequest = { categoriesExpanded = false },
-            //modifier=Modifier.width(LocalDensity.current)(width.toDp())
-        ) {
+
+            ) {
             categorias.forEach { label ->
                 DropdownMenuItem(onClick = {
-                    categoria = label
+                    AnadirViewModel.setCategoria(label)
                     categoriesExpanded = false
                 }) {
                     Text(text = label)
@@ -123,32 +126,24 @@ fun AnadirBody() {
                 .fillMaxWidth()
                 .padding(start = 8.dp)) {
             Text(text = "Tóxico")
-            Checkbox(checked = checked, onCheckedChange = { checked = !checked })
+            Checkbox(checked = toxico, onCheckedChange = { AnadirViewModel.setToxico(!toxico) })
         }
-        TextInput(text = estado, onValueChange = { estado = it }, label = "Estado")
+        TextInput(text = estado,
+            onValueChange = { AnadirViewModel.setEstado(it) },
+            label = "Estado")
 
         Spacer(modifier = Modifier.size(16.dp))
         ButtonDefault(text = "Añadir") {
-            val data = hashMapOf(
-                "nombre" to name,
-                "categoria" to categoria,
-                "toxico" to checked,
-                "estado" to estado
-            )
-            Log.i("HashMap", data.toString())
-            db.collection("farmacos").document(name).set(data, SetOptions.merge())
 
-            name=""
-            categoria=""
-            checked=false
-            estado=""
+
+            AnadirViewModel.crearFarmaco {
+                AnadirViewModel.setName("")
+                AnadirViewModel.setCategoria("")
+                AnadirViewModel.setToxico(false)
+                AnadirViewModel.setEstado("")
+            }
+
         }
     }
 }
 
-@Preview
-@Composable
-fun AnadirPreview() {
-    val navController = rememberNavController()
-    Anadir(navController)
-}

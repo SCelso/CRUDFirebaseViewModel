@@ -1,6 +1,6 @@
 package com.example.crudfirebaseviewmodel.modelo
 
-data class ExpandableCardItem(
+  class ExpandableCardItem(
     val id: String,
     val nombre: String,
     val categoria: String,
